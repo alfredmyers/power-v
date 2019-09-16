@@ -64,32 +64,34 @@ Param(
 
 function Remove-VirtualMachine {
 Param(
-	$VMName
+	[string[]]$VMNames
 )
 
-	$vm = Get-VM $VMName
+	foreach ($VMName in $VMNames) {
+		$vm = Get-VM $VMName
 
-	# If there are any snapshots, gets the root snapshot that would point to the base VHD.
-	$snapshot = (Get-VMSnapshot $vm | Where-Object ParentSnapshotName -eq $null)
+		# If there are any snapshots, gets the root snapshot that would point to the base VHD.
+		$snapshot = (Get-VMSnapshot $vm | Where-Object ParentSnapshotName -eq $null)
 
-	# If snapshots were found in the previous step, gets the path to the base VHDs
-	# Otherwise, gets the path to the VHDs from the VM itself.
-	# *** And although the term is in plural, the code hasn't been tested with VMs attached
-	# to more than a single virtual hard drive.
-	if ($snapshot) {
-		$vhds = $snapshot.HardDrives.Path
+		# If snapshots were found in the previous step, gets the path to the base VHDs
+		# Otherwise, gets the path to the VHDs from the VM itself.
+		# *** And although the term is in plural, the code hasn't been tested with VMs attached
+		# to more than a single virtual hard drive.
+		if ($snapshot) {
+			$vhds = $snapshot.HardDrives.Path
+		}
+		else {
+			$vhds = $vm.HardDrives.Path
+		}
+
+		# The observed behavior of Remove-VM is it collapses existing snaphots before removing the VM.
+		# There should be no surprises with a VM pointing to the last in a series of snapshots all 
+		# pertaining to the same branch,
+		# but the code hasn't been tested for when there are diverging branches of snapshots nor when
+		# the VM is currently pointed to a snapshot that is parent to other snapshots.
+		# How are the diverging branches collapsed - if at all?
+		Remove-VM $vm -Force
+
+		Remove-Item $vhds
 	}
-	else {
-		$vhds = $vm.HardDrives.Path
-	}
-
-	# The observed behavior of Remove-VM is it collapses existing snaphots before removing the VM.
-	# There should be no surprises with a VM pointing to the last in a series of snapshots all 
-	# pertaining to the same branch,
-	# but the code hasn't been tested for when there are diverging branches of snapshots nor when
-	# the VM is currently pointed to a snapshot that is parent to other snapshots.
-	# How are the diverging branches collapsed - if at all?
-	Remove-VM $vm -Force
-
-	Remove-Item $vhds
 }
