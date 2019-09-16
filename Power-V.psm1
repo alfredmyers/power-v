@@ -57,7 +57,7 @@ Param(
 		Set-VMFirmware $VM -SecureBootTemplate $SecureBootTemplate
 	}
 	else {
-		Set-VMFirmware $VM -EnableSecureBoot Off
+		Set-VMFirmware $VM -EnableSecureBoot Off -SecureBootTemplate 'MicrosoftUEFICertificateAuthority'
 	}
 	Return $VM
 }
